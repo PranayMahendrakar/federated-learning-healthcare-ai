@@ -1,0 +1,94 @@
+# =====================================================================
+# FL Client Configuration - Hospital Node
+# =====================================================================
+# Configuration for each participating hospital's FL client.
+# Patient data remains local — only model updates leave the hospital.
+
+# ── Server Connection ─────────────────────────────────────────────────
+server:
+  address: "localhost:8080"    # FL server address
+  timeout: 300                 # Connection timeout in seconds
+  max_retries: 5               # Reconnection attempts
+  retry_delay: 10              # Seconds between retries
+
+# ── Data Configuration ────────────────────────────────────────────────
+data:
+  type: "ecg"                  # Options: ecg, vitals, multi
+  # ECG specific settings
+  ecg:
+    sampling_rate: 360         # Hz
+    sequence_length: 360       # Samples per beat (1 second at 360Hz)
+    leads: 1                   # Number of ECG leads (1 or 12)
+    num_classes: 5             # AAMI arrhythmia classes
+    preprocessing:
+      bandpass_low: 0.5        # Hz
+      bandpass_high: 50.0      # Hz
+      normalize: "zscore"      # Options: zscore, minmax, robust
+      remove_baseline: true
+
+  # Patient monitoring vitals settings
+  vitals:
+    num_features: 34           # PhysioNet 2019 features
+    window_size: 12            # Time steps
+    prediction_horizon: 6      # Hours ahead to predict
+    num_classes: 2             # Binary: sepsis/no-sepsis
+    missing_value_strategy: "ffill_mean"
+
+# ── Model Configuration ───────────────────────────────────────────────
+model:
+  architecture: "ecg_cnn"     # Options: ecg_cnn, lstm, transformer
+  ecg_cnn:
+    base_filters: 64
+    dropout: 0.3
+  lstm:
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.3
+  transformer:
+    d_model: 128
+    nhead: 8
+    num_layers: 4
+
+# ── Differential Privacy (Client-Side) ────────────────────────────────
+differential_privacy:
+  enabled: true
+  noise_multiplier: 1.1        # Gaussian noise multiplier
+  max_grad_norm: 1.0           # Per-sample gradient clipping norm
+  target_epsilon: 1.0          # Max privacy budget
+  target_delta: 1.0e-5         # Delta for (eps, delta)-DP
+  accounting_method: "rdp"     # Options: rdp, gdp
+
+# ── Training Configuration ────────────────────────────────────────────
+training:
+  # These are defaults; server can override per round
+  local_epochs: 3
+  batch_size: 32
+  learning_rate: 0.001
+  optimizer: "adam"
+  weight_decay: 1.0e-4
+  gradient_clip: 1.0
+  early_stopping:
+    enabled: true
+    patience: 5
+    min_delta: 0.001
+  validation_split: 0.2        # Fraction of local data for validation
+
+# ── Privacy-Safe Data Handling ────────────────────────────────────────
+privacy:
+  # Data never leaves the hospital
+  data_stays_local: true
+  # Pseudonymize patient IDs in logs
+  pseudonymize: true
+  # Audit log for compliance
+  audit_log: "logs/privacy_audit.log"
+  # Discard local model after each round (no persistent storage)
+  discard_model_after_round: false
+
+# ── Logging ──────────────────────────────────────────────────────────
+logging:
+  level: "INFO"
+  log_file: "logs/fl_client.log"
+  log_training_metrics: true
+  tensorboard:
+    enabled: true
+    log_dir: "logs/tensorboard/"
