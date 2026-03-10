@@ -1,0 +1,67 @@
+# =====================================================================
+# FL Server Configuration - Federated Learning Healthcare AI
+# =====================================================================
+# Central server settings for coordinating hospital nodes.
+# No patient data flows to this server — only model updates.
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  address: "0.0.0.0:8080"
+
+# ── Federated Learning ───────────────────────────────────────────────
+federated:
+  num_rounds: 20               # Total FL rounds
+  min_fit_clients: 3           # Min clients for training round
+  min_evaluate_clients: 3      # Min clients for evaluation round
+  min_available_clients: 3     # Wait until N clients connect
+  fraction_fit: 1.0            # Fraction of available clients to train
+  fraction_evaluate: 1.0       # Fraction of available clients to eval
+
+# ── Aggregation Strategy ─────────────────────────────────────────────
+aggregation:
+  strategy: "fedavg"           # Options: fedavg, fedprox, robust
+  # FedProx parameters (used when strategy: fedprox)
+  fedprox:
+    proximal_mu: 0.1           # Proximal regularization strength
+  # Robust aggregation (used when strategy: robust)
+  robust:
+    use_trimmed_mean: false     # Use trimmed mean vs. median
+
+# ── Differential Privacy (Server-Side) ──────────────────────────────
+differential_privacy:
+  enabled: true
+  noise_multiplier: 1.0        # Gaussian noise scale (higher = more private)
+  max_grad_norm: 1.0           # Gradient clipping bound (sensitivity)
+  target_epsilon: 1.0          # Privacy budget target
+  target_delta: 1.0e-5         # Privacy failure probability
+
+# ── Local Training Config (sent to clients each round) ───────────────
+client_training:
+  local_epochs: 3              # Local training epochs per round
+  learning_rate: 0.001         # Client learning rate
+  batch_size: 32               # Local batch size
+  optimizer: "adam"            # Options: adam, sgd
+  momentum: 0.9                # SGD momentum (if optimizer: sgd)
+  weight_decay: 1.0e-4         # L2 regularization
+
+# ── Model Checkpointing ──────────────────────────────────────────────
+model:
+  save_dir: "checkpoints/"
+  save_every_n_rounds: 5       # Save global model every N rounds
+  best_metric: "accuracy"      # Metric for best model selection
+
+# ── Logging & Monitoring ─────────────────────────────────────────────
+logging:
+  level: "INFO"
+  log_file: "logs/fl_server.log"
+  tensorboard:
+    enabled: true
+    log_dir: "logs/tensorboard/"
+
+# ── Security ─────────────────────────────────────────────────────────
+security:
+  require_tls: false           # Enable TLS for client connections
+  certificate: null            # Path to TLS certificate
+  private_key: null            # Path to private key
+  verify_clients: false        # Require client certificates
